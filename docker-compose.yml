@@ -1,0 +1,63 @@
+version: '3.7'
+
+x-fpm:
+  &fpm
+  build:
+    context: ./images/php80-fpm
+    args:
+      - USER_ID
+      - GROUP_ID
+  networks:
+      - proxy-network
+  env_file: .env
+
+services:
+  php-site:
+    << : *fpm
+    volumes:
+      - ./www/site:/var/www/site
+    environment:
+      XDEBUG_CONFIG: "remote_host=192.168.220.1 remote_enable=1 remote_autostart=off  remote_port=9008"
+      PHP_IDE_CONFIG: "serverName=site"
+
+  nginx:
+    image: nginx:1.18.0-alpine
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      - ./www:/var/www
+      - ./logs:/var/log/nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - php-site
+    networks:
+      proxy-network:
+        aliases: # алиасы нужны если нужно общаться внутри сети между хостами. Например, если вы используете api
+          - proxy.loc
+
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./db/mysql80/data:/var/lib/mysql
+      - ./db/mysql80/restore-from:/docker-entrypoint-initdb.d
+      - ./db/mysql80/conf.d:/etc/mysql/conf.d
+      - ./db/mysql80/log:/var/log
+    networks:
+      - proxy-network
+    env_file: db/mysql80/.env
+
+  rabbitmq:
+    image: rabbitmq:3-alpine
+    networks:
+      - proxy-network
+    
+    
+networks:
+  proxy-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.220.0/28

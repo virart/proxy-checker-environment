@@ -1,10 +1,10 @@
-FROM php:8.0.2-fpm-alpine3.12
+FROM php:8.0.2-fpm
 
 
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 
 RUN install-php-extensions @composer \
-    && install-php-extensions opcache intl zip bz2 mcrypt yaml imagick mongodb pgsql pdo_mysql pdo_pgsql redis \
+    && install-php-extensions opcache intl zip bz2 mcrypt yaml imagick mongodb pgsql pdo_mysql pdo_pgsql redis amqp
     #&& install-php-extensions xdebug
 
 ARG USER_ID
